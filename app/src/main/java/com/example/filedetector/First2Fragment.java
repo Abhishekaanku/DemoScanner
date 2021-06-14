@@ -62,7 +62,7 @@ public class First2Fragment extends Fragment implements KeyWordAdapter.ClickEven
 
         } else {
             curPackageName = fileList.get(codePosition);
-            Intent intent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
+            Intent intent = new Intent(Intent.ACTION_DELETE);
             intent.setData(Uri.parse("package:" + fileList.get(codePosition)));
             intent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
             startActivityForResult(intent, DELETE_APP);
@@ -72,8 +72,8 @@ public class First2Fragment extends Fragment implements KeyWordAdapter.ClickEven
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Toast.makeText(getContext(), "Uninstall Success!", Toast.LENGTH_SHORT).show();
         if (requestCode == DELETE_APP && resultCode == RESULT_OK) {
+            Toast.makeText(getContext(), "Uninstall Success!", Toast.LENGTH_SHORT).show();
             for (String appPackage : fileList) {
                 if (!isAppPresent(appPackage, getContext())) {
                     fileList.remove(appPackage);
@@ -84,7 +84,6 @@ public class First2Fragment extends Fragment implements KeyWordAdapter.ClickEven
                 }
             }
         }
-
     }
 
     private boolean isAppPresent(String packageName, Context context) {

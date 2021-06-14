@@ -27,9 +27,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -41,6 +46,8 @@ import androidx.recyclerview.widget.RecyclerView;
 public class FirstFragment extends Fragment implements KeyWordAdapter.ClickEventHandler {
     private ArrayList<String> keywordList = new ArrayList<>();
     private static final String BUNDLE_KEYWORD_LIST = "bundle_keyword_list";
+    private static final String BUNDLE_APP_SET = "bundle_App_Set";
+
     RecyclerView recyclerView;
     LinearLayoutManager linearLayoutManager;
     KeyWordAdapter keyWordAdapter;
@@ -48,6 +55,8 @@ public class FirstFragment extends Fragment implements KeyWordAdapter.ClickEvent
     ProgressBar progressBar;
     Button appScanButton;
     Button fileScanButton;
+
+    Set<String> bannedAppSet = new HashSet<>();
 
 
     @Override
@@ -69,6 +78,11 @@ public class FirstFragment extends Fragment implements KeyWordAdapter.ClickEvent
 
         if (savedInstanceState != null && savedInstanceState.containsKey(BUNDLE_KEYWORD_LIST)) {
             keywordList.addAll(savedInstanceState.getStringArrayList(BUNDLE_KEYWORD_LIST));
+        }
+        if (savedInstanceState != null && savedInstanceState.containsKey(BUNDLE_APP_SET)) {
+            keywordList.addAll(savedInstanceState.getStringArrayList(BUNDLE_APP_SET));
+        } else {
+            populateAppListFromResource();
         }
 
         appScanButton = view.findViewById(R.id.button_first);
@@ -122,10 +136,27 @@ public class FirstFragment extends Fragment implements KeyWordAdapter.ClickEvent
         return view;
     }
 
+    private void populateAppListFromResource() {
+        bannedAppSet.clear();
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    getContext().getAssets().open("banned_apps.txt")));
+            String appName;
+            while ((appName = reader.readLine()) != null) {
+//                Collections.addAll(bannedAppSet, appName.toLowerCase().split(" "));
+                bannedAppSet.add(appName.toLowerCase());
+
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         if (keywordList.size() != 0) {
             outState.putStringArrayList(BUNDLE_KEYWORD_LIST, keywordList);
+            outState.putStringArrayList(BUNDLE_APP_SET, new ArrayList<>(bannedAppSet));
         }
         super.onSaveInstanceState(outState);
     }
@@ -140,12 +171,28 @@ public class FirstFragment extends Fragment implements KeyWordAdapter.ClickEvent
             if (pm.getLaunchIntentForPackage(packageInfo.packageName) != null &&
 
                     !pm.getLaunchIntentForPackage(packageInfo.packageName).equals("")) {
-                String appName = packageInfo.packageName;
-                for (String keyword : keywordList) {
-                    if (appName.toLowerCase().contains(keyword.toLowerCase())) {
-                        appList.add(packageInfo.packageName);
+                String appPackage = packageInfo.packageName;
+                try {
+                    String appName = (String) pm.getApplicationLabel(pm.getApplicationInfo(appPackage,
+                            PackageManager.GET_META_DATA));
+                    if (bannedAppSet.contains(appName.toLowerCase())) {
+                        appList.add(appPackage);
                     }
+                } catch (PackageManager.NameNotFoundException ignored) {
+
                 }
+
+
+//                for (String appComp : appName.split("\\.")) {
+//                    if (isSuspectible(appComp.toLowerCase().toCharArray())) {
+//                        appList.add(packageInfo.packageName);
+//                    }
+//                }
+//                for (String keyword : keywordList) {
+//                    if (appName.toLowerCase().contains(keyword.toLowerCase())) {
+//
+//                    }
+//                }
 
 //                System.out.println("Launch Intent For Package :" +
 //                        pm.getLaunchIntentForPackage(packageInfo.packageName));
@@ -165,11 +212,7 @@ public class FirstFragment extends Fragment implements KeyWordAdapter.ClickEvent
         appScanButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (keywordList.get(0).equals("NO KEYWORD")) {
-                    Toast.makeText(getContext(), "Add At Least One Keyword", Toast.LENGTH_LONG).show();
-                } else {
-                    new ScanFileAsyncTask().execute(Pair.create(Environment.getExternalStorageDirectory(), false));
-                }
+                new ScanFileAsyncTask().execute(Pair.create(Environment.getExternalStorageDirectory(), false));
             }
         });
 
